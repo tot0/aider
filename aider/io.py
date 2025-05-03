@@ -257,6 +257,7 @@ class InputOutput:
         dry_run=False,
         llm_history_file=None,
         editingmode=EditingMode.EMACS,
+        auto_confirm=None,
         fancy_input=True,
         file_watcher=None,
         multiline_mode=False,
@@ -305,6 +306,10 @@ class InputOutput:
         if self.output:
             self.pretty = False
 
+        # Auto-confirm: env var overrides unless arg explicitly set
+        if auto_confirm is None:
+            auto_confirm = str(os.getenv("AIDER_AUTO_CONFIRM", "")).lower() in ("1", "true", "yes")
+        self.auto_confirm = auto_confirm
         self.yes = yes
 
         self.input_history_file = input_history_file
@@ -803,6 +808,11 @@ class InputOutput:
         allow_never=False,
     ):
         self.num_user_asks += 1
+        # Auto-confirm path (skip prompt)
+        if self.auto_confirm and not explicit_yes_required:
+            hist = f"{question.strip()} yes (auto)"
+            self.append_chat_history(hist, linebreak=True, blockquote=True)
+            return True
 
         # Ring the bell if needed
         self.ring_bell()
