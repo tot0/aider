@@ -28,6 +28,7 @@ from aider.copypaste import ClipboardWatcher
 from aider.deprecated import handle_deprecated_model_args
 from aider.format_settings import format_settings, scrub_sensitive_info
 from aider.history import ChatSummary
+from aider.memory import Memory
 from aider.io import InputOutput
 from aider.llm import litellm  # noqa: F401; properly init litellm on launch
 from aider.models import ModelSettings
@@ -945,6 +946,12 @@ def main(argv=None, input=None, output=None, force_git_root=None, return_coder=F
         args.max_chat_history_tokens or main_model.max_chat_history_tokens,
     )
 
+    memory = Memory(
+        args.memory_file,
+        summarizer=summarizer,
+        io=io,
+    )
+
     if args.cache_prompts and args.map_refresh == "auto":
         args.map_refresh = "files"
 
@@ -996,6 +1003,7 @@ def main(argv=None, input=None, output=None, force_git_root=None, return_coder=F
             detect_urls=args.detect_urls,
             auto_copy_context=args.copy_paste,
             auto_accept_architect=args.auto_accept_architect,
+            memory=memory,
         )
     except UnknownEditFormat as err:
         io.tool_error(str(err))

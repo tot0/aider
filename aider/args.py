@@ -271,6 +271,7 @@ def get_parser(default_config_files, git_root):
     default_chat_history_file = (
         os.path.join(git_root, ".aider.chat.history.md") if git_root else ".aider.chat.history.md"
     )
+    default_memory_file = os.path.join(git_root, ".aider/memory.md") if git_root else ".aider/memory.md"
     group.add_argument(
         "--input-history-file",
         metavar="INPUT_HISTORY_FILE",
@@ -282,6 +283,12 @@ def get_parser(default_config_files, git_root):
         metavar="CHAT_HISTORY_FILE",
         default=default_chat_history_file,
         help=f"Specify the chat history file (default: {default_chat_history_file})",
+    ).complete = shtab.FILE
+    group.add_argument(
+        "--memory-file",
+        metavar="MEMORY_FILE",
+        default=default_memory_file,
+        help=f"Specify the persistent memory file (default: {default_memory_file})",
     ).complete = shtab.FILE
     group.add_argument(
         "--restore-chat-history",
