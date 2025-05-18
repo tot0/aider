@@ -335,6 +335,7 @@ class Coder:
         file_watcher=None,
         auto_copy_context=False,
         auto_accept_architect=True,
+        memory=None,
     ):
         # Fill in a dummy Analytics if needed, but it is never .enable()'d
         self.analytics = analytics if analytics is not None else Analytics()
@@ -348,6 +349,7 @@ class Coder:
 
         self.auto_copy_context = auto_copy_context
         self.auto_accept_architect = auto_accept_architect
+        self.memory = memory
 
         self.ignore_mentions = ignore_mentions
         if not self.ignore_mentions:
@@ -1258,12 +1260,21 @@ class Coder:
 
         chunks = ChatChunks()
 
+        memory_txt = self.memory.content.strip() if getattr(self, "memory", None) else ""
+
         if self.main_model.use_system_prompt:
-            chunks.system = [
-                dict(role="system", content=main_sys),
-            ]
+            chunks.system = []
+            if memory_txt:
+                chunks.system.append(dict(role="system", content=memory_txt))
+            chunks.system.append(dict(role="system", content=main_sys))
         else:
-            chunks.system = [
+            chunks.system = []
+            if memory_txt:
+                chunks.system += [
+                    dict(role="user", content=memory_txt),
+                    dict(role="assistant", content="Ok."),
+                ]
+            chunks.system += [
                 dict(role="user", content=main_sys),
                 dict(role="assistant", content="Ok."),
             ]
