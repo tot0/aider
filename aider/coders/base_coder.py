@@ -48,6 +48,7 @@ from aider.repomap import RepoMap
 from aider.run_cmd import run_cmd
 from aider.utils import format_content, format_messages, format_tokens, is_image_file
 from aider.waiting import WaitingSpinner
+from aider.web_agent import WebSearchAgent
 
 from ..dump import dump  # noqa: F401
 from .chat_chunks import ChatChunks
@@ -425,6 +426,17 @@ class Coder:
 
         self.commands = commands or Commands(self.io, self)
         self.commands.coder = self
+
+        verify_ssl = getattr(self.commands, "verify_ssl", True)
+        self.web_agent = WebSearchAgent(
+            io=self.io, weak_model=self.main_model.weak_model, verify_ssl=verify_ssl
+        )
+
+        if self.functions:
+            self.functions = list(self.functions)
+        else:
+            self.functions = []
+        self.functions.append(WebSearchAgent.function_spec)
 
         self.repo = repo
         if use_git and self.repo is None:
@@ -1177,6 +1189,11 @@ class Coder:
         if user_lang:
             final_reminders.append(f"Reply in {user_lang}.\n")
 
+        if hasattr(self, "web_agent"):
+            final_reminders.append(
+                "Use search_web(query) if you need up-to-date information from the web."
+            )
+
         platform_text = self.get_platform_info()
 
         if self.suggest_shell_commands:
@@ -1543,6 +1560,20 @@ class Coder:
 
         if self.partial_response_function_call:
             args = self.parse_partial_args()
+            if (
+                self.partial_response_function_call.get("name") == "search_web"
+                and args
+            ):
+                query = args.get("query", "")
+                results = self.web_agent.search(query)
+                summary = []
+                for url, text in results:
+                    summary.append(f"- {text} ({url})")
+                content = f"Search results for '{query}':\n" + "\n".join(summary)
+                self.cur_messages += [dict(role="assistant", content=content)]
+                self.partial_response_function_call = {}
+                self.partial_response_content = content
+                return
             if args:
                 content = args.get("explanation") or ""
             else:
